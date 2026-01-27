@@ -2,13 +2,33 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUser, updateUserRole, deactivateUser } from "@/lib/auth";
 import { UserRole } from "@/lib/auth";
+import { getUserStats, UserStats } from "@/lib/userStats";
 
 export default function SuperAdminDashboard() {
   const { user, loading } = useAuth();
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const stats = await getUserStats();
+        setUserStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -33,19 +53,25 @@ export default function SuperAdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <h3 className="text-lg font-semibold mb-2">Total Users</h3>
-            <p className="text-3xl font-bold text-blue-600">0</p>
+            <p className="text-3xl font-bold text-blue-600">
+              {statsLoading ? "..." : userStats?.totalUsers || 0}
+            </p>
             <p className="text-sm text-gray-500">All roles</p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <h3 className="text-lg font-semibold mb-2">Admins</h3>
-            <p className="text-3xl font-bold text-green-600">0</p>
+            <p className="text-3xl font-bold text-green-600">
+              {statsLoading ? "..." : userStats?.admins || 0}
+            </p>
             <p className="text-sm text-gray-500">Active admins</p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <h3 className="text-lg font-semibold mb-2">Customers</h3>
-            <p className="text-3xl font-bold text-orange-600">0</p>
+            <p className="text-3xl font-bold text-orange-600">
+              {statsLoading ? "..." : userStats?.customers || 0}
+            </p>
             <p className="text-sm text-gray-500">Registered</p>
           </div>
 
@@ -53,6 +79,34 @@ export default function SuperAdminDashboard() {
             <h3 className="text-lg font-semibold mb-2">System Status</h3>
             <p className="text-3xl font-bold text-green-600">OK</p>
             <p className="text-sm text-gray-500">All systems</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold mb-2">Super Admins</h3>
+            <p className="text-3xl font-bold text-purple-600">
+              {statsLoading ? "..." : userStats?.superAdmins || 0}
+            </p>
+            <p className="text-sm text-gray-500">System administrators</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold mb-2">Active Users</h3>
+            <p className="text-3xl font-bold text-teal-600">
+              {statsLoading ? "..." : userStats?.activeUsers || 0}
+            </p>
+            <p className="text-sm text-gray-500">Currently active</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold mb-2">Inactive Users</h3>
+            <p className="text-3xl font-bold text-gray-600">
+              {statsLoading
+                ? "..."
+                : (userStats?.totalUsers || 0) - (userStats?.activeUsers || 0)}
+            </p>
+            <p className="text-sm text-gray-500">Deactivated accounts</p>
           </div>
         </div>
 
@@ -95,7 +149,7 @@ export default function SuperAdminDashboard() {
                     </p>
                   </div>
                   <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                    0 users
+                    {statsLoading ? "..." : userStats?.totalUsers || 0} users
                   </span>
                 </div>
               </div>
@@ -127,7 +181,11 @@ export default function SuperAdminDashboard() {
                     </p>
                   </div>
                   <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
-                    Security
+                    {statsLoading
+                      ? "..."
+                      : (userStats?.totalUsers || 0) -
+                        (userStats?.activeUsers || 0)}{" "}
+                    inactive
                   </span>
                 </div>
               </div>
