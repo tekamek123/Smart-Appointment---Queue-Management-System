@@ -5,6 +5,7 @@ import {
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
+  getAuth,
   User as FirebaseUser,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
@@ -150,15 +151,6 @@ export const createUser = async (
     );
 
     // Create user profile in Firestore with specified role
-    const userData: User = {
-      uid: userCredential.user.uid,
-      email: userCredential.user.email!,
-      displayName,
-      role,
-      createdAt: new Date(),
-      isActive: true,
-    };
-
     await setDoc(doc(db, "users", userCredential.user.uid), {
       uid: userCredential.user.uid,
       email: userCredential.user.email!,
@@ -167,6 +159,10 @@ export const createUser = async (
       createdAt: serverTimestamp(),
       isActive: true,
     });
+
+    // Note: Firebase Auth automatically signs in the new user
+    // This is a limitation of the client-side SDK
+    // The Super Admin will need to log back in
   } catch (error) {
     console.error("Create user error:", error);
     throw error;
