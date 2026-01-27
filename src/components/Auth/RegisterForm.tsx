@@ -1,19 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { signInWithEmail, signInWithGoogle } from '@/lib/auth';
+import { signUpWithEmail, signInWithGoogle } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
-export function LoginForm() {
+export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
+    displayName: '',
     email: '',
     password: '',
-    rememberMe: false
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,25 +25,31 @@ export function LoginForm() {
     setLoading(true);
     setError('');
 
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const user = await signInWithEmail(formData.email, formData.password);
+      const user = await signUpWithEmail(
+        formData.email,
+        formData.password,
+        formData.displayName
+      );
       
-      // Redirect based on user role
-      switch (user.role) {
-        case 'customer':
-          router.push('/dashboard/customer');
-          break;
-        case 'admin':
-          router.push('/dashboard/admin');
-          break;
-        case 'super_admin':
-          router.push('/dashboard/super-admin');
-          break;
-        default:
-          router.push('/dashboard');
-      }
+      // Redirect to customer dashboard
+      router.push('/dashboard/customer');
     } catch (error: any) {
-      setError(error.message || 'Login failed. Please try again.');
+      setError(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -55,12 +62,8 @@ export function LoginForm() {
     try {
       const user = await signInWithGoogle();
       
-      // Google users can only be customers
-      if (user.role === 'customer') {
-        router.push('/dashboard/customer');
-      } else {
-        setError('Google sign-in is only available for customers. Please use email and password.');
-      }
+      // Google users are automatically customers
+      router.push('/dashboard/customer');
     } catch (error: any) {
       setError(error.message || 'Google sign-in failed. Please try again.');
     } finally {
@@ -71,10 +74,10 @@ export function LoginForm() {
   return (
     <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
       <h2 className="text-3xl font-bold text-gray-900 mb-2">
-        Smart Appointment &amp; Queue Management System
+        Create Account
       </h2>
       <p className="text-gray-600 mb-8">
-        Please enter your details to sign in.
+        Join our Smart Appointment & Queue Management System
       </p>
 
       {error && (
@@ -84,6 +87,26 @@ export function LoginForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Full Name
+          </label>
+          <div className="relative">
+            <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Enter your full name"
+              value={formData.displayName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData({ ...formData, displayName: e.target.value })
+              }
+              className="pl-10"
+              required
+              disabled={loading}
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email Address
@@ -112,7 +135,7 @@ export function LoginForm() {
             <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
             <Input
               type={showPassword ? 'text' : 'password'}
-              placeholder="Enter your password"
+              placeholder="Create a password"
               value={formData.password}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({ ...formData, password: e.target.value })
@@ -132,26 +155,32 @@ export function LoginForm() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="remember"
-              checked={formData.rememberMe}
-              onCheckedChange={(checked: boolean) =>
-                setFormData({ ...formData, rememberMe: checked })
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+            <Input
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData({ ...formData, confirmPassword: e.target.value })
               }
+              className="pl-10 pr-10"
+              required
               disabled={loading}
             />
-            <label htmlFor="remember" className="text-sm text-gray-600">
-              Remember me
-            </label>
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              disabled={loading}
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
-          <a
-            href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            Forgot password?
-          </a>
         </div>
 
         <Button
@@ -159,17 +188,17 @@ export function LoginForm() {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors"
           disabled={loading}
         >
-          {loading ? 'Signing in...' : 'Login'}
+          {loading ? 'Creating Account...' : 'Create Account'}
         </Button>
 
         <div className="text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Already have an account?{' '}
             <a
-              href="/register"
+              href="/login"
               className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
-              Register
+              Sign In
             </a>
           </p>
         </div>
@@ -182,7 +211,7 @@ export function LoginForm() {
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="px-2 bg-white text-gray-500">
-              Or continue with (Customers only)
+              Or register with
             </span>
           </div>
         </div>

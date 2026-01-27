@@ -2,8 +2,10 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'customer' | 'staff' | 'admin';
+  role: "customer" | "admin" | "super_admin";
   createdAt: Date;
+  isActive?: boolean;
+  assignedBranches?: string[]; // For admins - which branches they can manage
 }
 
 export interface Appointment {
@@ -13,7 +15,7 @@ export interface Appointment {
   service: string;
   date: Date;
   duration: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  status: "scheduled" | "completed" | "cancelled";
   notes?: string;
   createdAt: Date;
 }
@@ -31,7 +33,7 @@ export interface QueueCustomer {
   customerId: string;
   position: number;
   joinedAt: Date;
-  status: 'waiting' | 'serving' | 'completed';
+  status: "waiting" | "serving" | "completed";
 }
 
 export interface Branch {
