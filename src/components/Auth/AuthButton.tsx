@@ -33,11 +33,15 @@ export function AuthButton() {
     <div>
       {user ? (
         <div className="flex items-center gap-4">
-          <span>Welcome, {user.displayName || user.email}</span>
-          <Button onClick={handleSignOut}>Sign Out</Button>
+          <span className="text-sm text-gray-700">Welcome, {user.displayName || user.email}</span>
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
+            Sign Out
+          </Button>
         </div>
       ) : (
-        <Button onClick={handleSignIn}>Sign In with Google</Button>
+        <Button variant="outline" size="sm" onClick={handleSignIn}>
+          Sign In
+        </Button>
       )}
     </div>
   );
