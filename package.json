@@ -1,0 +1,41 @@
+{
+  "name": "smart-appointment-system",
+  "version": "1.0.0",
+  "main": "next.config.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@firebase/auth": "^1.12.0",
+    "@firebase/firestore": "^4.10.0",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@types/node": "^20.19.30",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.4.23",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.13",
+    "firebase": "^10.14.1",
+    "lucide-react": "^0.303.0",
+    "next": "14.2.13",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.9.3"
+  }
+}
