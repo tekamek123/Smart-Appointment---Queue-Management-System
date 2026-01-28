@@ -19,6 +19,7 @@ import {
   Building2,
   FileText,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 
 interface MenuItem {
@@ -147,8 +148,28 @@ export function Sidebar() {
         },
         {
           title: "Manage Roles",
-          href: "/users/roles",
+          href: "/dashboard/super-admin/users/roles",
           icon: <Shield className="h-4 w-4" />,
+          roles: ["super_admin"],
+        },
+      ],
+    },
+    {
+      title: "Organization Management",
+      href: "/organizations",
+      icon: <Building2 className="h-5 w-5" />,
+      roles: ["super_admin"],
+      children: [
+        {
+          title: "All Organizations",
+          href: "/dashboard/super-admin/organizations",
+          icon: <Building2 className="h-4 w-4" />,
+          roles: ["super_admin"],
+        },
+        {
+          title: "Create Organization",
+          href: "/dashboard/super-admin/organizations/create",
+          icon: <Plus className="h-4 w-4" />,
           roles: ["super_admin"],
         },
       ],
