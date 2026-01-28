@@ -1,23 +1,39 @@
-"use client";
+'use client';
 
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { createUser } from "@/lib/auth";
 import { UserRole } from "@/lib/auth";
-import { useState } from "react";
+import { getAllOrganizations } from "@/lib/organization";
+import { useState, useEffect } from "react";
 
 export default function CreateUserPage() {
   const { user, loading: authLoading } = useAuth();
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     displayName: "",
     role: "customer" as UserRole,
+    organizationId: "",
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const orgs = await getAllOrganizations();
+        setOrganizations(orgs.filter((org) => org.isActive));
+      } catch (error: any) {
+        console.error("Error fetching organizations:", error);
+      }
+    };
+
+    fetchOrganizations();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +42,8 @@ export default function CreateUserPage() {
       !formData.email ||
       !formData.password ||
       !formData.confirmPassword ||
-      !formData.displayName
+      !formData.displayName ||
+      !formData.organizationId
     ) {
       setError("Please fill in all fields");
       return;
@@ -42,7 +59,7 @@ export default function CreateUserPage() {
       return;
     }
 
-    setLoading(true);
+    setFormLoading(true);
     setError("");
     setSuccess("");
 
@@ -52,11 +69,10 @@ export default function CreateUserPage() {
         formData.password,
         formData.displayName,
         formData.role,
+        formData.organizationId
       );
-      setSuccess(
-        `✅ User "${formData.displayName}" created successfully with role "${formData.role}"`,
-      );
-
+      setSuccess(`✅ User "${formData.displayName}" created successfully with role "${formData.role}"`);
+      
       // Show message about session limitation
       setTimeout(() => {
         setSuccess(
@@ -74,13 +90,14 @@ export default function CreateUserPage() {
           confirmPassword: "",
           displayName: "",
           role: "customer",
+          organizationId: "",
         });
         setSuccess("");
       }, 4000);
     } catch (error: any) {
       setError(error.message || "Failed to create user");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -109,8 +126,12 @@ export default function CreateUserPage() {
     <DashboardLayout allowedRoles={["super_admin"]}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Create New User</h1>
-          <div className="text-gray-600">Add a new user to the system</div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Create New User
+          </h1>
+          <div className="text-gray-600">
+            Add a new user to the system
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -135,9 +156,7 @@ export default function CreateUserPage() {
                 <input
                   type="text"
                   value={formData.displayName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, displayName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter user's full name"
                   required
@@ -151,9 +170,7 @@ export default function CreateUserPage() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="user@example.com"
                   required
@@ -167,9 +184,7 @@ export default function CreateUserPage() {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Min 6 characters"
                   required
@@ -224,16 +239,42 @@ export default function CreateUserPage() {
                   {getRoleDescription(formData.role)}
                 </p>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Organization *
+                </label>
+                <select
+                  value={formData.organizationId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      organizationId: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select an organization</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.displayName} ({org.subscription.plan})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-gray-500 mt-1">
+                  Select the organization this user belongs to
+                </p>
+              </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <h4 className="font-medium text-blue-900 mb-2">
-                Important Notes:
-              </h4>
+              <h4 className="font-medium text-blue-900 mb-2">Important Notes:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• New users will be created with active status</li>
                 <li>• Users can change their password after first login</li>
                 <li>• Super Admin role should be assigned carefully</li>
+                <li>• Organization assignment is mandatory</li>
                 <li>
                   • You will need to refresh the page after creating a user due
                   to Firebase limitations
@@ -251,6 +292,7 @@ export default function CreateUserPage() {
                     confirmPassword: "",
                     displayName: "",
                     role: "customer",
+                    organizationId: "",
                   })
                 }
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
@@ -259,10 +301,10 @@ export default function CreateUserPage() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={formLoading}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Creating User..." : "Create User"}
+                {formLoading ? "Creating User..." : "Create User"}
               </button>
             </div>
           </form>

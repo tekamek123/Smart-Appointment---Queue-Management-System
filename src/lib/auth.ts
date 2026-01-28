@@ -153,6 +153,7 @@ export const createUser = async (
   password: string,
   displayName: string,
   role: UserRole,
+  organizationId?: string,
 ): Promise<void> => {
   try {
     // Create user in Firebase Auth
@@ -163,14 +164,21 @@ export const createUser = async (
     );
 
     // Create user profile in Firestore with specified role
-    await setDoc(doc(db, "users", userCredential.user.uid), {
+    const userData: any = {
       uid: userCredential.user.uid,
       email: userCredential.user.email!,
       displayName,
       role,
       createdAt: serverTimestamp(),
       isActive: true,
-    });
+    };
+
+    // Add organizationId if provided
+    if (organizationId) {
+      userData.organizationId = organizationId;
+    }
+
+    await setDoc(doc(db, "users", userCredential.user.uid), userData);
 
     // Note: Firebase Auth automatically signs in the new user
     // This is a limitation of the client-side SDK

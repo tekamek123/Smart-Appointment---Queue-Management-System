@@ -3,12 +3,14 @@
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getAllUsers, updateUserRole } from "@/lib/userStats";
+import { getAllOrganizations } from "@/lib/organization";
 import { UserRole } from "@/lib/auth";
 import { useState, useEffect } from "react";
 
 export default function ManageRolesPage() {
   const { user: currentUser, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -16,19 +18,28 @@ export default function ManageRolesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const userData = await getAllUsers();
-        setUsers(userData);
+        const [usersData, orgsData] = await Promise.all([
+          getAllUsers(),
+          getAllOrganizations(),
+        ]);
+        setUsers(usersData);
+        setOrganizations(orgsData.filter((org) => org.isActive));
       } catch (error: any) {
-        setError(error.message || "Failed to fetch users");
+        setError(error.message || "Failed to fetch data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchData();
   }, []);
+
+  const getOrganizationName = (organizationId: string) => {
+    const org = organizations.find((o) => o.id === organizationId);
+    return org ? org.displayName : "Unknown Organization";
+  };
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setActionLoading(userId);
@@ -176,6 +187,9 @@ export default function ManageRolesPage() {
                     User
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Organization
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Current Role
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -200,6 +214,13 @@ export default function ManageRolesPage() {
                         <div className="text-sm text-gray-500">
                           {user.email}
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {user.organizationId
+                          ? getOrganizationName(user.organizationId)
+                          : "No Organization"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
