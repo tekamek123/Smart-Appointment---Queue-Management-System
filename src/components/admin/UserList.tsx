@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllUsers, activateUser, deactivateUser } from "@/lib/userStats";
+import {
+  getAllUsers,
+  activateUser,
+  deactivateUser,
+  updateUserRole,
+} from "@/lib/userStats";
+import { getAllOrganizations } from "@/lib/organization";
 import { UserRole } from "@/lib/auth";
 
 interface User {
@@ -10,31 +16,46 @@ interface User {
   email: string;
   displayName: string;
   role: UserRole;
+  organizationId?: string;
   createdAt: any;
   isActive: boolean;
 }
 
 export function UserList() {
   const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<UserRole | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const userData = await getAllUsers();
+        console.log("Fetching users and organizations...");
+        const [userData, orgsData] = await Promise.all([
+          getAllUsers(),
+          getAllOrganizations(),
+        ]);
+        console.log("Users fetched:", userData.length);
+        console.log("Organizations fetched:", orgsData.length);
+
         setUsers(userData as User[]);
+        const activeOrgs = orgsData.filter((org) => org.isActive);
+        console.log("Active organizations:", activeOrgs.length);
+        setOrganizations(activeOrgs);
       } catch (error: any) {
-        setError(error.message || "Failed to fetch users");
+        console.error("Error fetching data:", error);
+        setError(error.message || "Failed to fetch data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchData();
   }, []);
 
   const handleToggleUserStatus = async (
@@ -63,6 +84,44 @@ export function UserList() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async (updatedData: Partial<User>) => {
+    if (!editingUser) return;
+
+    setActionLoading(editingUser.id);
+    try {
+      // Update role if changed
+      if (updatedData.role && updatedData.role !== editingUser.role) {
+        await updateUserRole(editingUser.id, updatedData.role);
+      }
+
+      // Update local state
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === editingUser.id ? { ...user, ...updatedData } : user,
+        ),
+      );
+
+      setEditModalOpen(false);
+      setEditingUser(null);
+      setError("");
+    } catch (error: any) {
+      setError(error.message || "Failed to update user");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const getOrganizationName = (organizationId?: string) => {
+    if (!organizationId) return "No Organization";
+    const org = organizations.find((o) => o.id === organizationId);
+    return org ? org.displayName : "Unknown Organization";
   };
 
   const filteredUsers = users.filter((user) => {
@@ -154,6 +213,9 @@ export function UserList() {
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Organization
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -179,6 +241,11 @@ export function UserList() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {getOrganizationName(user.organizationId)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}
                     >
@@ -200,7 +267,10 @@ export function UserList() {
                     {formatDate(user.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
                       Edit
                     </button>
                     <button
@@ -250,13 +320,165 @@ export function UserList() {
             </tbody>
           </table>
         </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No users found</p>
-          </div>
-        )}
       </div>
+
+      {/* Edit User Modal */}
+      {editModalOpen && editingUser && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                Edit User: {editingUser.displayName}
+              </h3>
+
+              {/* Debug info - remove in production */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="mb-4 p-2 bg-gray-100 text-xs">
+                  <div>Organizations loaded: {organizations.length}</div>
+                  <div>
+                    Current org ID: {editingUser.organizationId || "none"}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editingUser.displayName}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        displayName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editingUser.email}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Email cannot be changed
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role
+                  </label>
+                  <select
+                    value={editingUser.role}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        role: e.target.value as UserRole,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="customer">Customer</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Organization
+                  </label>
+                  <select
+                    value={editingUser.organizationId || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        organizationId: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">No Organization</option>
+                    {organizations.length > 0 ? (
+                      organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.displayName} ({org.subscription.plan})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        No organizations available
+                      </option>
+                    )}
+                  </select>
+                  {organizations.length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      No organizations loaded. Please refresh the page.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="userStatus"
+                      checked={editingUser.isActive}
+                      onChange={(e) =>
+                        setEditingUser({
+                          ...editingUser,
+                          isActive: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="userStatus"
+                      className="ml-2 block text-sm text-gray-900"
+                    >
+                      Active
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setEditingUser(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUpdateUser(editingUser)}
+                  disabled={actionLoading === editingUser.id}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {actionLoading === editingUser.id
+                    ? "Saving..."
+                    : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
