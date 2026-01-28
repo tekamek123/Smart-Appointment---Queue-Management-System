@@ -135,13 +135,13 @@ export function Sidebar() {
       children: [
         {
           title: "All Users",
-          href: "/users/all",
+          href: "/dashboard/super-admin/users",
           icon: <Users className="h-4 w-4" />,
           roles: ["super_admin"],
         },
         {
           title: "Create User",
-          href: "/users/create",
+          href: "/dashboard/super-admin/users/create",
           icon: <UserPlus className="h-4 w-4" />,
           roles: ["super_admin"],
         },

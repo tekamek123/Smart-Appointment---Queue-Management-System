@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { createUser, updateUserRole, deactivateUser } from "@/lib/auth";
 import { UserRole } from "@/lib/auth";
 import { getUserStats, UserStats } from "@/lib/userStats";
@@ -138,21 +139,23 @@ export default function SuperAdminDashboard() {
             )}
 
             <div className="space-y-3">
-              <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      View All Users
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Browse and manage all system users
-                    </p>
+              <Link href="/dashboard/super-admin/users">
+                <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        View All Users
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Browse and manage all system users
+                      </p>
+                    </div>
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                      {statsLoading ? "..." : userStats?.totalUsers || 0} users
+                    </span>
                   </div>
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                    {statsLoading ? "..." : userStats?.totalUsers || 0} users
-                  </span>
                 </div>
-              </div>
+              </Link>
 
               <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex justify-between items-center">

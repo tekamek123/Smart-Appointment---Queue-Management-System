@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import {
+  onAuthStateChanged,
+  User as FirebaseUser,
+  signOut,
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import { User } from "@/types";
 
@@ -19,11 +23,26 @@ export function useAuth() {
             const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
 
             if (userDoc.exists()) {
-              const userData = userDoc.data() as User;
-              setUser(userData);
+              const userData = userDoc.data();
+
+              // Check if user is active
+              if (!userData.isActive) {
+                // Sign out the user immediately if they're deactivated
+                await signOut(auth);
+                setUser(null);
+              } else {
+                setUser({
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email!,
+                  displayName:
+                    userData.displayName || firebaseUser.displayName || "",
+                  role: userData.role,
+                  isActive: userData.isActive,
+                  createdAt: userData.createdAt?.toDate() || new Date(),
+                });
+              }
             } else {
-              // User exists in Auth but not in Firestore - this shouldn't happen in normal flow
-              console.error("User exists in Auth but not in Firestore");
+              // User exists in Firebase Auth but not in Firestore
               setUser(null);
             }
           } catch (error) {

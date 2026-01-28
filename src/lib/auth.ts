@@ -29,20 +29,33 @@ export const signInWithEmail = async (
       email,
       password,
     );
-    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
 
+    // Check if user is active
+    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
     if (!userDoc.exists()) {
-      throw new Error("User profile not found. Please contact administrator.");
+      throw new Error("User profile not found. Please contact support.");
     }
 
-    const userData = userDoc.data() as User;
+    const userData = userDoc.data();
+    if (!userData.isActive) {
+      // Sign out the user immediately if they're deactivated
+      await firebaseSignOut(auth);
+      throw new Error(
+        "Your account has been deactivated. Please contact an administrator.",
+      );
+    }
 
     return {
-      ...userCredential.user,
-      ...userData,
-    } as AuthUser;
+      uid: userCredential.user.uid,
+      email: userCredential.user.email!,
+      displayName:
+        userData.displayName || userCredential.user.displayName || "",
+      role: userData.role,
+      isActive: userData.isActive,
+      createdAt: userData.createdAt?.toDate() || new Date(),
+    };
   } catch (error) {
-    console.error("Email sign in error:", error);
+    console.error("Sign in error:", error);
     throw error;
   }
 };
@@ -86,31 +99,30 @@ export const signInWithGoogle = async (): Promise<AuthUser> => {
     const provider = new GoogleAuthProvider();
     const userCredential = await signInWithPopup(auth, provider);
 
-    // Check if user exists in Firestore
+    // Check if user exists and is active
     const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-
-    let userData: User;
-
     if (!userDoc.exists()) {
-      // Create new user profile for Google sign-in
-      userData = {
-        uid: userCredential.user.uid,
-        email: userCredential.user.email!,
-        displayName: userCredential.user.displayName || "Google User",
-        role: "customer", // Default role for new registrations
-        createdAt: new Date(),
-        isActive: true,
-      };
+      throw new Error("User profile not found. Please register first.");
+    }
 
-      await setDoc(doc(db, "users", userCredential.user.uid), userData);
-    } else {
-      userData = userDoc.data() as User;
+    const userData = userDoc.data();
+    if (!userData.isActive) {
+      // Sign out the user immediately if they're deactivated
+      await firebaseSignOut(auth);
+      throw new Error(
+        "Your account has been deactivated. Please contact an administrator.",
+      );
     }
 
     return {
-      ...userCredential.user,
-      ...userData,
-    } as AuthUser;
+      uid: userCredential.user.uid,
+      email: userCredential.user.email!,
+      displayName:
+        userData.displayName || userCredential.user.displayName || "",
+      role: userData.role,
+      isActive: userData.isActive,
+      createdAt: userData.createdAt?.toDate() || new Date(),
+    };
   } catch (error) {
     console.error("Google sign in error:", error);
     throw error;
