@@ -147,7 +147,7 @@ export function Sidebar() {
         },
         {
           title: "Manage Roles",
-          href: "/users/roles",
+          href: "/dashboard/super-admin/users/roles",
           icon: <Shield className="h-4 w-4" />,
           roles: ["super_admin"],
         },
